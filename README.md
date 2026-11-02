@@ -2,6 +2,9 @@
 
 Protótipo completo de **Agente Conversacional de Atendimento ao Cliente** construído em **Python** para a **Empório da Música** (loja fictícia de instrumentos musicais em Campo Grande/MS), desenvolvido para o Desafio Técnico de AI Engineer da **Artefact**.
 
+> 🧪 **Demonstração Interativa Online (Bônus para Avaliação):** [**https://emporio-da-musica-agent-seven.vercel.app/**](https://emporio-da-musica-agent-seven.vercel.app/)
+> *Ambiente publicado na Vercel exclusivamente para facilitar o teste imediato pela banca avaliadora (inclui simulador do chat do cliente + modo opcional "Raio-X" para inspecionar as chamadas de ferramentas em tempo real).*
+
 ---
 
 ## ✨ Visão Geral da Solução
