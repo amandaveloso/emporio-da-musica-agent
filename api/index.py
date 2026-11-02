@@ -92,6 +92,7 @@ class ChatResponse(BaseModel):
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health_check() -> dict[str, Any]:
     from src.database import get_catalog_db
 
@@ -105,6 +106,7 @@ def health_check() -> dict[str, Any]:
 
 
 @app.post("/api/chat", response_model=ChatResponse)
+@app.post("/chat", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequest, request: Request) -> ChatResponse:
     from src.agent import get_agent
 
@@ -139,6 +141,7 @@ def chat_endpoint(payload: ChatRequest, request: Request) -> ChatResponse:
 
 
 @app.get("/api/session/{session_id}")
+@app.get("/session/{session_id}")
 def get_session_history(session_id: str) -> dict[str, Any]:
     from src.agent import get_agent
 
@@ -150,6 +153,7 @@ def get_session_history(session_id: str) -> dict[str, Any]:
 
 
 @app.delete("/api/session/{session_id}")
+@app.delete("/session/{session_id}")
 def reset_session(session_id: str) -> dict[str, str]:
     from src.agent import get_agent
 
