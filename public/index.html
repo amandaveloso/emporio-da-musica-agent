@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empório da Música — Atendimento Inteligente | Campo Grande - MS</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Painel Institucional e Cenários Rápidos -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-card">
+        <div class="brand-logo">
+          <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true">
+            <rect width="48" height="48" rx="12" fill="#0B2E42"/>
+            <circle cx="24" cy="27" r="11" fill="none" stroke="#E5A93C" stroke-width="2.4"/>
+            <circle cx="24" cy="27" r="5" fill="#E5A93C" opacity="0.25"/>
+            <line x1="21.5" y1="7" x2="21.5" y2="39" stroke="#FAF7F2" stroke-width="1.3"/>
+            <line x1="24" y1="7" x2="24" y2="39" stroke="#FAF7F2" stroke-width="1.3"/>
+            <line x1="26.5" y1="7" x2="26.5" y2="39" stroke="#FAF7F2" stroke-width="1.3"/>
+          </svg>
+          <div>
+            <h1>Empório da Música</h1>
+            <p class="slogan">Sua música começa aqui.</p>
+          </div>
+        </div>
+        <div class="store-meta">
+          <div class="status-pill" id="storeStatusPill">
+            <span class="dot"></span>
+            <span id="storeStatusText">Campo Grande/MS • Seg–Sex 9h–18h</span>
+          </div>
+          <p class="store-address">📍 Rua 14 de Maio, 3200 — Centro, Campo Grande/MS</p>
+          <p class="store-address">📞 (67) 3341-4444 • WhatsApp (67) 3321-4500</p>
+        </div>
+      </div>
+
+      <div class="scenarios-section">
+        <h2>Cenários para Testar (1 clique)</h2>
+        <p class="scenarios-hint">Experimente perguntas de catálogo, regras de negócio, pedidos e escopo:</p>
+        <div class="scenario-list">
+          <button class="scenario-btn" data-prompt="Quais opções de violões disponíveis custando até R$ 1.000?">
+            <span class="sc-tag">Catálogo + Filtro</span>
+            <strong>🎸 Violões até R$ 1.000</strong>
+          </button>
+          <button class="scenario-btn" data-prompt="Quanto custa o Takamine GD20? Ele ainda está na promoção de 12%?">
+            <span class="sc-tag">Promoção Expirada</span>
+            <strong>🏷️ Preço do Takamine GD20</strong>
+          </button>
+          <button class="scenario-btn" data-prompt="Quais instrumentos estão em promoção hoje? Se eu pagar no PIX ganho mais 5% de desconto?">
+            <span class="sc-tag">Regra Não-Cumulativa</span>
+            <strong>🔥 Promoções Ativas + PIX</strong>
+          </button>
+          <button class="scenario-btn" data-prompt="Me arrependi da minha compra online que recebi há 4 dias, posso devolver meu pedido? Quem paga o frete?">
+            <span class="sc-tag">RAG Políticas</span>
+            <strong>🔄 Direito de Arrependimento</strong>
+          </button>
+          <button class="scenario-btn" data-prompt="Quero consultar o status e o código de rastreio do meu pedido #8.">
+            <span class="sc-tag">Pedidos + LGPD</span>
+            <strong>📦 Rastrear Pedido #8</strong>
+          </button>
+          <button class="scenario-btn" data-prompt="Vocês vendem encordoamento de violão aço, palhetas e cabo P10?">
+            <span class="sc-tag">Guardrail Escopo</span>
+            <strong>🔌 Pedido de Acessórios</strong>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <span>Desafio Técnico AI Engineer • Python + FastAPI + Gemini + RAG</span>
+      </div>
+    </aside>
+
+    <!-- Área Principal de Conversa -->
+    <main class="chat-stage">
+      <header class="chat-header">
+        <div class="header-left">
+          <button class="icon-btn mobile-only" id="toggleSidebarBtn" title="Menu da Loja">☰</button>
+          <div>
+            <h2>Atendimento ao Músico</h2>
+            <span class="subtitle">Especialista virtual conectado ao estoque e ao manual oficial</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-outline" id="resetChatBtn" title="Limpar conversa e iniciar nova sessão">
+            ↺ Nova Conversa
+          </button>
+          <button class="btn-inspector active" id="toggleInspectorBtn" title="Exibir/ocultar ferramentas acionadas pelo agente">
+            🔍 Raio-X do Agente <span class="badge" id="toolCountBadge">0</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="messages-container" id="messagesContainer" aria-live="polite"></section>
+
+      <footer class="composer-area">
+        <form id="chatForm" class="composer-form">
+          <textarea
+            id="messageInput"
+            rows="1"
+            maxlength="1500"
+            placeholder="Pergunte sobre instrumentos, preços, parcelamento, pedidos ou políticas da loja..."
+            required
+          ></textarea>
+          <button type="submit" id="sendBtn" class="send-btn">
+            <span>Enviar</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M22 2L11 13"></path>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+            </svg>
+          </button>
+        </form>
+        <p class="composer-disclaimer">
+          Preços, estoque e políticas consultados em tempo real na base da Empório da Música. Pressione <kbd>Enter</kbd> para enviar.
+        </p>
+      </footer>
+    </main>
+
+    <!-- Painel Técnico: Raio-X do Agente -->
+    <aside class="inspector-panel" id="inspectorPanel">
+      <div class="inspector-header">
+        <div>
+          <h3>🔍 Raio-X do Agente</h3>
+          <p>Telemetria de Function Calling, SQLite e RAG em tempo real</p>
+        </div>
+        <button class="icon-btn" id="closeInspectorBtn" title="Fechar painel">✕</button>
+      </div>
+
+      <div class="arch-pills">
+        <span class="arch-chip">🐍 Python FastAPI</span>
+        <span class="arch-chip">🗄️ SQLite Catálogo</span>
+        <span class="arch-chip">📖 RAG Híbrido (RRF)</span>
+      </div>
+
+      <div class="traces-list" id="tracesList">
+        <div class="empty-trace">
+          Envie uma mensagem ou clique em um cenário ao lado para inspecionar quais ferramentas o agente decide acionar.
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
