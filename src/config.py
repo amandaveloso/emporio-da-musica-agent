@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -28,15 +29,22 @@ GEMINI_EMBEDDING_MODEL: str = os.getenv(
     "GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"
 ).strip()
 
-IS_VERCEL: bool = bool(os.getenv("VERCEL"))
+IS_VERCEL: bool = bool(
+    os.getenv("VERCEL")
+    or os.getenv("VERCEL_ENV")
+    or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+)
 
-# Caminho de persistência do histórico de sessões (local vs serverless /tmp)
+# Caminho de persistência do histórico de sessões (local vs filesystem read-only serverless)
 if IS_VERCEL:
-    SESSIONS_DB_PATH = Path("/tmp/emporio_sessions.db")
+    SESSIONS_DB_PATH = Path(tempfile.gettempdir()) / "emporio_sessions.db"
 else:
-    PROCESSED_DIR = DATA_DIR / "processed"
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    SESSIONS_DB_PATH = PROCESSED_DIR / "sessions.db"
+    try:
+        PROCESSED_DIR = DATA_DIR / "processed"
+        PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+        SESSIONS_DB_PATH = PROCESSED_DIR / "sessions.db"
+    except OSError:
+        SESSIONS_DB_PATH = Path(tempfile.gettempdir()) / "emporio_sessions.db"
 
 POLICY_INDEX_CACHE_PATH = DATA_DIR / "policies_index.json"
-POLICY_PDF_PATH = DATA_DIR / "políticas_da_loja.pdf"
+POLICY_PDF_PATH = next(DATA_DIR.glob("*.pdf"), DATA_DIR / "políticas_da_loja.pdf")

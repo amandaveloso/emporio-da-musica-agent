@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from collections import defaultdict, deque
@@ -17,9 +18,6 @@ from pydantic import BaseModel, Field
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
-from src.agent import get_agent  # noqa: E402
-from src.database import get_catalog_db  # noqa: E402
 
 app = FastAPI(
     title="Empório da Música — Assistente Virtual API",
@@ -95,6 +93,8 @@ class ChatResponse(BaseModel):
 
 @app.get("/api/health")
 def health_check() -> dict[str, Any]:
+    from src.database import get_catalog_db
+
     db_summary = get_catalog_db().audit_summary()
     return {
         "status": "ok",
@@ -106,6 +106,8 @@ def health_check() -> dict[str, Any]:
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_endpoint(payload: ChatRequest, request: Request) -> ChatResponse:
+    from src.agent import get_agent
+
     forwarded = request.headers.get("x-forwarded-for", "")
     client_ip = (
         forwarded.split(",")[0].strip()
@@ -138,6 +140,8 @@ def chat_endpoint(payload: ChatRequest, request: Request) -> ChatResponse:
 
 @app.get("/api/session/{session_id}")
 def get_session_history(session_id: str) -> dict[str, Any]:
+    from src.agent import get_agent
+
     agent = get_agent()
     return {
         "session_id": session_id,
@@ -147,11 +151,18 @@ def get_session_history(session_id: str) -> dict[str, Any]:
 
 @app.delete("/api/session/{session_id}")
 def reset_session(session_id: str) -> dict[str, str]:
+    from src.agent import get_agent
+
     agent = get_agent()
     agent.memory.clear_session(session_id)
     return {"status": "cleared", "session_id": session_id}
 
 
+IS_SERVERLESS = bool(
+    os.getenv("VERCEL")
+    or os.getenv("VERCEL_ENV")
+    or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+)
 PUBLIC_DIR = ROOT_DIR / "public"
-if PUBLIC_DIR.exists():
+if not IS_SERVERLESS and PUBLIC_DIR.exists():
     app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="public")
