@@ -7,18 +7,18 @@
 Complete **Python Customer Support Conversational Agent** built for **Empório da Música** (a fictional musical instrument store in Campo Grande/MS, Brazil), developed for **Artefact's AI Engineer Technical Challenge**.
 
 > 🧪 **Live Interactive Demo Sandbox (Bonus for Evaluation):** [**https://emporio-da-musica-agent-seven.vercel.app/**](https://emporio-da-musica-agent-seven.vercel.app/)
-> *Hosted on Vercel strictly as an interactive evaluation sandbox so reviewers can test the agent immediately without local setup. The center panel simulates the customer messaging experience, while the side panels ("Quick Test Scenarios" and "Evaluator Mode — X-Ray") exist exclusively to expose real-time tool-calling telemetry during technical review.*
+> *Published on Vercel strictly as a testing environment so reviewers can try the agent immediately without setting up keys locally. The center chat simulates the customer experience, while the side panels ("Quick Test Scenarios" and "Evaluator Mode — X-Ray") exist only for technical inspection during review — not for end customers.*
 
 ---
 
 ## ✨ Solution Overview
 
-Empório da Música's human support team was overloaded with recurring inquiries regarding instrument availability, pricing, active promotions, payment/installment rules, order tracking, and return policies.
+Empório da Música's support team was overloaded with repetitive questions about instrument availability, prices, active promotions, payment/installment rules, order status, and return policies.
 
-Following the challenge's core guideline (*"the focus is the agent working properly"* with **Python as the main language**), the heart of this project is a modular **Python Hybrid Agent with Function Calling**:
-- **Structured operational data (`data/*.csv`)** is audited, cleaned, and queried deterministically via an **in-memory SQLite relational layer** in Python — eliminating hallucinations on prices, stock counts, PIX discounts, and installment calculations.
-- **Store policies and procedures (`data/políticas_da_loja.pdf`)** are parsed into 26 section-aware chunks and indexed in a **Hybrid RAG engine** combining **Dense Embeddings (`gemini-embedding-2`)** and **BM25 Lexical Search** via *Reciprocal Rank Fusion (RRF)*.
-- **Interaction Interfaces (CLI + Optional Web Demo Sandbox):** the agent runs natively in the terminal (`python cli.py`) and via `FastAPI`. As an extra convenience ("cherry on top") for reviewers, a lightweight web sandbox deployed on Vercel lets evaluators trigger test scenarios in one click and inspect underlying tool calls via **Evaluator Mode (X-Ray)** — a developer-only view that would never be shown to end customers in production.
+Following the challenge's main guideline (*"the focus is the agent working properly"* with **Python as the main language**), I structured the solution around separating **exact tabular data** from **text policies**:
+- **Structured store data (`data/*.csv`)** is cleaned, validated, and queried using **SQLite in Python** — ensuring prices, stock counts, PIX discounts, and installment rules are calculated with exact code rather than guessed by the language model.
+- **Store policies (`data/políticas_da_loja.pdf`)** are split by the manual's numbered sections and searched using a **RAG module** that combines **search by meaning** (Gemini embeddings) with **exact keyword search** — so the agent finds the right rule whether the customer uses informal phrasing or exact terms.
+- **Simple Interfaces (CLI + Optional Web Demo Sandbox):** the agent runs directly in the terminal (`python cli.py`) and via `FastAPI`. As a "cherry on top" to make evaluation easier, I added a simple web sandbox on Vercel where reviewers can test scenarios in one click and optionally inspect which Python tools the agent called (**Evaluator Mode — X-Ray**).
 
 ---
 
@@ -27,12 +27,12 @@ Following the challenge's core guideline (*"the focus is the agent working prope
 ```mermaid
 flowchart LR
     C["👤 Customer / Reviewer<br/>(CLI or Vercel Demo Sandbox)"] --> API["🐍 FastAPI / CLI<br/>(Python 3.12)"]
-    API --> AG["🧠 Agent Orchestrator<br/>Gemini 3.5 Flash + Auto-Fallback"]
-    API <--> MEM["💾 Session Memory<br/>(SQLite / Serverless Sync)"]
+    API --> AG["🧠 Agent Orchestrator<br/>Gemini 3.5 Flash + Backup Model"]
+    API <--> MEM["💾 Conversation History<br/>(SQLite)"]
 
     AG -->|"Catalog, Stock,<br/>PIX & Installments"| T1["🛠️ buscar_catalogo_instrumentos<br/>listar_categorias_e_promocoes_ativas"]
-    AG -->|"Order Status, Tracking<br/>& LGPD Verification"| T2["📦 consultar_pedido_cliente<br/>(Relational SQLite)"]
-    AG -->|"Returns, Shipping, Hours,<br/>Warranty & Store Info"| T3["📖 consultar_politicas_loja<br/>(Hybrid RAG: RRF = Dense + BM25)"]
+    AG -->|"Order Status, Tracking<br/>& LGPD Check"| T2["📦 consultar_pedido_cliente<br/>(SQLite Queries)"]
+    AG -->|"Returns, Shipping, Hours,<br/>Warranty & Store Rules"| T3["📖 consultar_politicas_loja<br/>(PDF Search: Meaning + Keywords)"]
 ```
 
 ### Project Structure
@@ -40,30 +40,30 @@ flowchart LR
 ```text
 emporio-da-musica/
 ├── api/
-│   └── index.py               # FastAPI entrypoint (local + Vercel Serverless) & IP rate limiting
+│   └── index.py               # FastAPI entrypoint (local + Vercel) & simple IP rate limit
 ├── data/
 │   ├── *.csv                  # Raw catalog, customers, orders, items, and promotions tables
 │   ├── políticas_da_loja.pdf  # Official internal store policy manual (8 pages)
-│   └── policies_index.json    # Versioned cache of 26 hierarchical chunks + 768d embeddings
-├── examples/                  # 5 real multi-turn conversation transcripts with tool traces
-├── public/                    # Lightweight demo sandbox UI (HTML/CSS/JS) with Evaluator X-Ray
+│   └── policies_index.json    # Saved PDF sections + embeddings so startup is fast
+├── examples/                  # 5 real multi-turn conversation logs generated by the agent
+├── public/                    # Simple web demo sandbox (HTML/CSS/JS) with Evaluator X-Ray
 ├── scripts/
-│   └── generate_examples.py   # Reproducible script to execute and export real test scenarios
+│   └── generate_examples.py   # Script to run and export real test conversations
 ├── src/
-│   ├── config.py              # Environment config, paths, and model fallback chain
-│   ├── database.py            # CSV sanitization, anomaly detection, and SQLite repository
-│   ├── rag.py                 # Section-aware PDF parser + Hybrid Retriever (BM25 + Cosine RRF)
-│   ├── tools.py               # Deterministic catalog, payment calculator, order/LGPD & RAG tools
-│   ├── prompts.py             # System Prompt, musical store persona, and scope/LGPD guardrails
-│   ├── memory.py              # SQLite session history persistence
-│   └── agent.py               # Function-calling loop, tool trace telemetry, and model failover
+│   ├── config.py              # Environment variables, paths, and backup model list
+│   ├── database.py            # CSV cleaning, data quality checks, and SQLite loader
+│   ├── rag.py                 # PDF section splitter + policy search (meaning + keywords)
+│   ├── tools.py               # Python functions for catalog, payment math, orders & policies
+│   ├── prompts.py             # System instructions, store tone of voice, and scope limits
+│   ├── memory.py              # SQLite conversation history per session
+│   └── agent.py               # Main loop connecting Gemini to the Python tools
 ├── tests/
-│   └── test_emporio_agent.py  # 11 automated unit tests covering critical business rules
-├── cli.py                     # Primary local interactive command-line interface (CLI)
+│   └── test_emporio_agent.py  # 11 automated tests checking core business rules
+├── cli.py                     # Terminal chat interface (primary local mode)
 ├── pytest.ini                 # Pytest configuration
-├── requirements.txt           # Lean production dependencies
+├── requirements.txt           # Production dependencies
 ├── requirements-dev.txt       # Development & testing dependencies
-└── vercel.json                # Vercel Python Serverless bundling & timeout settings
+└── vercel.json                # Vercel deployment configuration
 ```
 
 ---
@@ -96,7 +96,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
-Edit `.env` and paste your free Gemini API key:
+Open `.env` and add your free Gemini API key:
 
 ```env
 GEMINI_API_KEY=your_google_ai_studio_key
@@ -109,13 +109,13 @@ GEMINI_MODEL=gemini-3.5-flash
 python cli.py
 ```
 
-### 4. Run the Simple Web Demo Sandbox Locally (Optional)
+### 4. Run the Web Demo Sandbox Locally (Optional)
 
 ```bash
 uvicorn api.index:app --reload --port 8000
 ```
 
-Open **`http://localhost:8000`** in your browser to use the customer chat simulator alongside the optional **Evaluator Mode (X-Ray)**.
+Open **`http://localhost:8000`** in your browser to test the customer chat simulator and the optional **Evaluator Mode (X-Ray)**.
 
 ### 5. Run Automated Tests
 
@@ -127,70 +127,72 @@ pytest -v
 
 ## 🧠 Technical Decisions & Rationale
 
-1. **Hybrid Tool-Calling Architecture (SQLite + RAG) vs. Alternatives:**
-   - *Why not pure Vector RAG over CSVs?* Embedding tabular rows leads to unreliable numeric filtering (e.g., *"acoustic guitars under R$ 1,000"*), broken relational joins (`orders` ↔ `order_items` ↔ `products` ↔ `customers`), and missed boolean flags (`is_active = 1`).
-   - *Why not unconstrained Text-to-SQL?* Allowing raw LLM-generated SQL risks join mistakes, forgotten business filters (such as offering `discontinued` items that still show residual stock), and accidental cross-customer data exposure.
-   - *Chosen Design:* Typed Python tools wrap parameterized SQLite queries and exact financial calculations (PIX discounts, non-cumulativity, progressive installment minimums), while a dedicated Hybrid RAG tool handles unstructured normative policies from the PDF.
-2. **Model Provider & Automatic Failover Chain:**
-   - Powered by **Google Gemini (`gemini-3.5-flash`)** on the Google AI Studio Free Tier for strong Portuguese fluency, native function calling, and unified embeddings (`gemini-embedding-2`).
-   - Free-tier endpoints can occasionally hit transient demand spikes (`HTTP 503` / `429`). `src/agent.py` implements short retry timeouts and automatic failover across `MODEL_FALLBACK_CHAIN` (`gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.8-flash`), with `thinking_budget=256` tuned for fast serverless response times (~2–4s).
-3. **Section-Aware Chunking & Hybrid RRF Retrieval:**
-   - Rather than naive fixed-character chunking that splits tables mid-sentence, `src/rag.py` strips headers/footers, stitches cross-page sections (e.g., *5.2 Shipping to Other Cities* across pages 4–5), and splits the manual into its **26 hierarchical sections**, preserving parent section titles.
-   - Retrieval fuses **768-d Cosine Similarity** (pre-cached in `data/policies_index.json` for zero cold-start latency) with **Portuguese BM25** via **Reciprocal Rank Fusion (RRF)** — capturing both semantic intent (*"bought online and changed my mind"* → *4.1 Right of Regret*) and exact keywords (*"Jadlog"*, *"LGPD"*, *"CNPJ"*), with graceful fallback to pure BM25 if offline.
-4. **Interaction Interface & Conversation Persistence:**
-   - All agent intelligence lives in Python (`src/`) and runs standalone via `cli.py`. The Vercel web UI was added as a reviewer-friendly bonus, explicitly separating the **Customer Chat Simulator** from the **Evaluator X-Ray Inspector**.
-   - Conversation history is persisted per `session_id` in **SQLite** (`sessions.db` locally; `/tmp` + recent client history sync on Vercel Serverless) to support natural multi-turn follow-ups.
+1. **Separating Tabular Queries (SQLite) from Document Search (RAG):**
+   - Coming from a Data background, my main priority was avoiding numeric errors or invented rules. Searching CSV tables purely as text makes filters like *"acoustic guitars up to R\$ 1,000"*, table joins (`orders` ↔ `order_items` ↔ `products` ↔ `customers`), and active flags (`is_active = 1`) unreliable.
+   - At the same time, letting an LLM write free-form SQL directly on the database could forget business rules (such as ignoring `discontinued` items that still have stock) or expose another customer's order.
+   - **Chosen approach:** Controlled Python functions (`tools.py`) run parameterized SQLite queries and exact payment math, while a separate RAG tool searches the PDF manual for store policies. The LLM focuses on understanding the customer's question, calling the right Python function(s), and writing a clear, friendly answer.
+2. **LLM Provider & Automatic Backup Model:**
+   - I chose **Google Gemini (`gemini-3.5-flash`)** via Google AI Studio's free tier because it handles Portuguese naturally, supports native *Function Calling* (choosing which Python tool to run), and provides embeddings under the same free API key.
+   - During real testing, we saw free-tier models occasionally return temporary `HTTP 503` (high demand) errors. To keep the agent reliable, `src/agent.py` automatically falls back to `gemini-3.5-flash-lite` (and `gemini-3.8-flash`) if the primary model is busy.
+3. **PDF Policy Search (`src/rag.py`):**
+   - Instead of cutting the 8-page PDF every fixed number of characters (which would cut pricing/shipping tables in half), the parser splits the document along its **26 numbered sections** (`1.`, `1.1`, ..., `10.`), keeping the section title attached to each block of text.
+   - To retrieve the best sections for a question, it combines **search by meaning** (Gemini embeddings, useful when a customer says *"bought online and changed my mind"* without knowing the term *"Right of Regret"*) and **exact keyword matching** (BM25, useful for specific terms like *"Jadlog"*, *"LGPD"*, or *"CNPJ"*). The pre-processed sections are saved in `data/policies_index.json` so the app starts quickly without re-indexing the PDF every time.
+4. **Interaction Interface & Conversation Memory:**
+   - All business logic lives in Python (`src/`) and works directly in the terminal (`cli.py`). The Vercel web page was built as a bonus sandbox to facilitate testing, clearly separating the **Customer Chat Simulator** from the **Evaluator X-Ray** panel.
+   - Conversation history is saved per session in **SQLite** (`sessions.db` locally, or `/tmp` synced with recent browser messages on Vercel) so follow-up questions (*"and how much is it via PIX?"*) keep context.
 
 ---
 
-## 🔍 Data Audit & Documented Assumptions
+## 🔍 Exploratory Data Analysis & Documented Assumptions
 
-During exploratory analysis of `data/`, several real-world inconsistencies were uncovered and handled deterministically:
+Inspecting the raw CSVs and cross-checking them against the PDF manual revealed several data quality issues and edge cases. Below is how each one was handled:
 
-| Source | Finding | Engineering Decision / Handling |
+| Source | Finding in the Data | Decision / How the Code Handles It |
 | :--- | :--- | :--- |
-| `promotions.csv` | Out of 25 promotions, **21 are expired (`is_active = 0`)** — including the 12% promo on *Takamine GD20* (`product_id = 95`) — and only **4 are active (`is_active = 1`)** (`90`, `94`, `121`, `127`). | `tools.py` applies discounts **strictly** when `is_active = 1`, while keeping expired promo history so the agent can transparently clarify past offers (Manual Sec. 7.3). |
-| Manual Sec. 3 vs. 6.2 | PIX grants 5% off list price, but promotions are **non-cumulative** with the 5% PIX discount. | `calcular_condicoes_pagamento()` applies 5% PIX off only when `em_promocao_ativa = False`; active promos keep the promotional price and always display original price + % discount. |
-| Manual Sec. 3 vs. 3.1 | Summary table mentions R\$ 100 min installment, whereas Sec. 3.1 specifies tiered minimums (up to 3x min R\$ 50; 4x–6x min R\$ 80; 7x–12x min R\$ 100). | Adopted the specific rule in **Section 3.1** to compute exact interest-free max installments per product. |
-| `products.csv` (`id = 136`) | *Ibanez Bass 2X* has `stock_quantity = 13`, yet `status = discontinued`. | Availability logic ignores residual stock on `discontinued` items, labels them discontinued, and suggests active alternatives from the same category (Sec. 7.3). |
-| `products.csv` (`id = 96`, `130`) | *Giannini GF-3D* is `active` with `stock_quantity = 0`; *Kala KA-ABP-CTG* is `coming_soon` (and referenced in orders `3` and `14`). | Excluded from in-stock listings; when queried directly, the tool reports exact status and suggests 3 similar in-stock instruments. |
-| `products.csv` (`ids 135–144`) | Catalog mismatches across title, description, and JSON `specs` (e.g., `id = 135` named *Music Man* with *Fender Jazz Bass* description; `id = 142` *Korg* vs *Roland 88 keys* vs `specs` `61` keys). | `database.py` flags anomalies at ingestion (`data_quality_notes`) and instructs the agent to disclose discrepancies transparently and offer physical verification. |
-| `categories.csv` (`ids 6, 7, 8`) | *Woodwinds*, *Brass*, and *Orchestral Strings* exist in `categories.csv` but have 0 rows in `products.csv`. | Reported with `disponiveis = 0` so the agent informs current digital catalog unavailability without hallucinating models. |
-| `políticas_da_loja.pdf` | Cover/Sec. 1.2 list phone `(67) 3341-4444` and accented email (`contato@empóriodamusica.com.br`), while Sec. 7 lists WhatsApp `(67) 3321-4500`. | Standardized valid ASCII email (`contato@emporiodamusica.com.br`) and surfaced both official phone/WhatsApp channels clearly. |
-| `orders.csv` + LGPD | Sequential `order_id`s (`1..20`) could leak personal customer data if queried blindly. | `consultar_pedido_cliente()` enforces LGPD holder verification (name, email, or phone digits) before returning order details and masks emails (Sec. 9). |
+| `promotions.csv` | Out of 25 rows, **21 promotions are expired (`is_active = 0`)** — including the 12% promo on *Takamine GD20* (`product_id = 95`) — and only **4 are active (`is_active = 1`)** (`90`, `94`, `121`, `127`). | `tools.py` applies discounts **only** when `is_active = 1`, while keeping the expired info so the agent can politely clarify if a customer asks about an old offer (Manual Sec. 7.3). |
+| Manual Sec. 3 vs. 6.2 | PIX gives 5% off, but active promotions **cannot be combined** with the 5% PIX discount. | `calcular_condicoes_pagamento()` applies 5% PIX off only when there is no active promotion; promotional items keep the promo price and always show original price + % discount. |
+| Manual Sec. 3 vs. 3.1 | The summary table mentions a R\$ 100 minimum installment, while Sec. 3.1 defines progressive minimums (up to 3x min R\$ 50; 4x–6x min R\$ 80; 7x–12x min R\$ 100). | Adopted the detailed rule in **Section 3.1** to calculate exact interest-free installments per instrument. |
+| `products.csv` (`id = 136`) | *Ibanez Bass 2X* has `stock_quantity = 13`, but `status = discontinued`. | Filtering only by `stock > 0` would sell a discontinued product. The tool marks `discontinued` items as unavailable and suggests active alternatives in the same category. |
+| `products.csv` (`id = 96`, `130`) | *Giannini GF-3D* is `active` with `stock_quantity = 0`; *Kala KA-ABP-CTG* has status `coming_soon` (and appears in orders `3` and `14`). | Excluded from in-stock searches; if asked directly, the agent informs the exact status and suggests 3 similar in-stock instruments. |
+| `products.csv` (`ids 135–144`) | Catalog inconsistencies between title, description, and JSON `specs` (e.g., `id = 135` named *Music Man* with a *Fender Jazz Bass* description; `id = 142` *Korg* vs *Roland 88 keys* vs `specs` `61` keys). | `database.py` flags these mismatches when loading the CSV (`data_quality_notes`) so the agent warns the customer transparently and offers confirmation with the store team. |
+| `categories.csv` (`ids 6, 7, 8`) | *Woodwinds*, *Brass*, and *Orchestral Strings* exist in `categories.csv` but have 0 products in `products.csv`. | Reported with `disponiveis = 0` so the agent informs they are currently unavailable in the catalog without inventing products. |
+| `políticas_da_loja.pdf` | Cover/Sec. 1.2 show phone `(67) 3341-4444` and an accented email (`contato@empóriodamusica.com.br`), while Sec. 7 shows WhatsApp `(67) 3321-4500`. | Standardized the valid email without accent (`contato@emporiodamusica.com.br`) and presented both official phone/WhatsApp numbers clearly. |
+| `orders.csv` + LGPD | Sequential `order_id`s (`1..20`) would expose personal data if anyone typed a random order number. | `consultar_pedido_cliente()` asks for simple holder confirmation (name, email, or phone digits) before showing order details, and partially masks the email (Sec. 9 - LGPD). |
 
 ---
 
 ## 💬 Real Interaction Examples (`examples/`)
 
-The [`examples/`](./examples/) folder contains **5 real multi-turn transcripts** generated by the agent (including collapsible tool-call telemetry):
+The [`examples/`](./examples/) folder contains **5 real multi-turn conversations** tested with the agent (including which tools were called):
 
-1. [`01_catalogo_violoes_ate_1000.md`](./examples/01_catalogo_violoes_ate_1000.md) — Filtered search for acoustic guitars up to R\$ 1,000 + beginner nylon recommendation & PIX/installment breakdown.
-2. [`02_takamine_gd20_promocao_expirada_e_loja.md`](./examples/02_takamine_gd20_promocao_expirada_e_loja.md) — *Takamine GD20* pricing handling an expired 12% promotion (`is_active = 0`) + store address & opening hours.
-3. [`03_pedido_lgpd_e_direito_arrependimento.md`](./examples/03_pedido_lgpd_e_direito_arrependimento.md) — **Non-trivial scenario:** order `#8` tracking with LGPD identity verification + online Right of Regret rules (Sec. 4.1).
+1. [`01_catalogo_violoes_ate_1000.md`](./examples/01_catalogo_violoes_ate_1000.md) — Search for acoustic guitars up to R\$ 1,000 + beginner nylon recommendation & PIX/installment simulation.
+2. [`02_takamine_gd20_promocao_expirada_e_loja.md`](./examples/02_takamine_gd20_promocao_expirada_e_loja.md) — *Takamine GD20* price check handling an expired 12% promotion (`is_active = 0`) + store address & hours.
+3. [`03_pedido_lgpd_e_direito_arrependimento.md`](./examples/03_pedido_lgpd_e_direito_arrependimento.md) — **Multi-step scenario:** order `#8` tracking with LGPD confirmation + online Right of Regret rules (Sec. 4.1).
 4. [`04_promocao_ativa_nao_cumulativa_e_sem_estoque.md`](./examples/04_promocao_ativa_nao_cumulativa_e_sem_estoque.md) — Active 18% promo non-cumulativity with PIX (*Crafter HT-100*) + out-of-stock handling with in-stock alternatives (*Giannini GF-3D*).
-5. [`05_guardrails_acessorios_e_fora_de_escopo.md`](./examples/05_guardrails_acessorios_e_fora_de_escopo.md) — Polite redirection for standalone accessories (strings/picks/amps) and strict refusal of out-of-scope prompts.
+5. [`05_guardrails_acessorios_e_fora_de_escopo.md`](./examples/05_guardrails_acessorios_e_fora_de_escopo.md) — Polite refusal of standalone accessories (strings/picks/amps) and out-of-scope questions.
 
 ---
 
-## ⚠️ Known Limitations & What I Would Do With More Time
+## ⚠️ Known Limitations & Next Steps (With More Time)
 
-1. **Managed Cloud Session Persistence:** On Vercel Serverless, `/tmp` storage is ephemeral across cold starts (mitigated here via client-side recent history sync). In production, I would back sessions with **PostgreSQL (Supabase/Neon)** or **Redis (Upstash)**.
-2. **Strong Customer Authentication:** Declarative name/email/phone matching prevents casual ID enumeration, whereas a production WhatsApp Business integration would verify the authenticated sender phone number or a one-time passcode (OTP).
-3. **Automated LLM Evaluation Suite (Evals):** Beyond deterministic `pytest` unit tests, I would add an *LLM-as-a-Judge* evaluation pipeline measuring faithfulness, tool-selection recall, and persona adherence across synthetic adversarial dialogues.
-4. **Live Carrier Shipping Quotes:** Direct integration with Correios and Jadlog APIs for real-time ZIP-code shipping quotes outside Greater Campo Grande.
-5. **Token Streaming (SSE):** Server-Sent Events streaming on the web sandbox for lower perceived time-to-first-token.
+1. **Cloud Database for Session History:** Locally, SQLite persists conversations on disk (`sessions.db`). On Vercel, serverless functions use temporary `/tmp` storage that resets when instances restart (handled here by sending recent browser history along with requests). In a production environment, I would connect a cloud database such as **PostgreSQL**.
+2. **Stronger Customer Verification:** Checking name, email, or phone digits prevents someone from guessing sequential order IDs (`#1`, `#2`...), but in a real WhatsApp Business integration I would tie order lookups to the customer's authenticated phone number or a confirmation code.
+3. **Recurring Quality Checks on Conversations:** Today, `pytest` covers the deterministic Python/SQL rules (discounts, installments, stock filters, LGPD, and policy lookup). With more time, I would build a broader test battery of common and tricky customer questions to track answer quality whenever prompts or models are updated.
+4. **Shipping Quotes by ZIP Code (CEP):** Today the agent informs the official shipping rules and deadlines from the PDF; a natural evolution would be integrating carrier tables/APIs (Correios and Jadlog) to calculate shipping costs by CEP.
 
 ---
 
-## 🤖 Use of Coding Assistants (AI Workflow)
+## 🤖 Use of Coding Assistants & Validation Workflow
 
-As requested in the challenge guidelines, **Google Antigravity** was used as an AI pair-programming assistant throughout development:
+With **4+ years of experience working with Data**, this challenge was my **first practical end-to-end project building an LLM conversational agent**. As encouraged in the guidelines, I used **Google Antigravity** as an AI coding assistant to help bridge the parts that were newer to me (Gemini Function Calling syntax, hybrid PDF search implementation, and Vercel serverless setup), while applying my data background to drive business rules, data quality, and validation at every step:
 
-1. **Exploratory Data & Policy Auditing:** Used to rapidly cross-check all 6 CSV schemas against the 8-page PDF manual, surfacing edge cases (discontinued items with stock > 0, inactive promotions, catalog text mismatches, and tiered installment rules) which I reviewed and turned into explicit deterministic rules.
-2. **Architecture-First Planning:** Collaborated on structuring a clean Python-first modular design separating relational queries (SQLite) from normative retrieval (Hybrid RAG), alongside a lightweight Vercel evaluation sandbox.
-3. **Test-Driven Incremental Implementation:** Each module (`database`, `rag`, `tools`, `agent`, `api`, `ui`) was built and verified step by step with `pytest` and live Gemini calls — catching real integration nuances early, such as transient `HTTP 503` spikes (solved via model failover) and Vercel serverless bundling/routing behaviors.
-4. **Documentation & Demo Polish:** Assisted in crafting the store-themed evaluation sandbox (with the *Evaluator X-Ray* inspector) and structuring this bilingual documentation.
+1. **Planning & Scope Control Before Coding:** Rather than asking the assistant to generate a black-box project all at once, I started by asking for a structured breakdown of the challenge and reviewed the plan first. I also steered scope decisions along the way — for example, making sure the Vercel interface was clearly framed as a **demo sandbox for evaluators** (separating the technical *Evaluator X-Ray* from the customer chat), keeping true to the prompt's focus on a working Python agent and a simple UI.
+2. **Data-Driven Validation of Rules & Edge Cases:** I leaned on my experience with data analysis and SQL to review what was found in the 6 CSV files against the 8-page PDF manual — ensuring the code strictly filtered `is_active = 1` on promotions, blocked `discontinued` items even when `stock_quantity > 0`, flagged conflicting product descriptions/JSON specs, calculated PIX/installments accurately, and protected customer order data (LGPD).
+3. **Hands-On Testing & Fixing Real Deployment Issues:** Nothing suggested by the AI assistant was treated as finished without running and testing it:
+   - I ran the FastAPI server manually in my local terminal (`uvicorn`) and tested live conversations with my Gemini API key.
+   - We verified the business logic with 11 automated tests (`pytest`) and noticed real free-tier API behavior (occasional `503` busy responses), validating the model fallback mechanism.
+   - When deploying to Vercel, the first attempts failed in production (`FUNCTION_INVOCATION_FAILED` and `404` on `/api/chat`). By checking the deployment behavior, we identified that Vercel was reading `pyproject.toml` instead of installing `requirements.txt`, and that an extra rewrite rule in `vercel.json` was breaking FastAPI routes — both of which were fixed and re-tested live on the public URL.
+4. **Reviewing Documentation for Clarity:** Finally, I reviewed both the real conversation transcripts in `examples/` and this `README.md` to make sure every architectural decision is documented clearly, honestly, and matches what I validated in practice.
 
 ---
 ---
@@ -201,21 +203,21 @@ As requested in the challenge guidelines, **Google Antigravity** was used as an 
 
 > 🇺🇸 **[Back to English version ↑](#english-top)**
 
-Protótipo completo de **Agente Conversacional de Atendimento ao Cliente** construído em **Python** para a **Empório da Música** (loja fictícia de instrumentos musicais em Campo Grande/MS), desenvolvido para o Desafio Técnico de AI Engineer da **Artefact**.
+Protótipo de **Agente Conversacional de Atendimento ao Cliente** construído em **Python** para a **Empório da Música** (loja fictícia de instrumentos musicais em Campo Grande/MS), desenvolvido para o Desafio Técnico de AI Engineer da **Artefact**.
 
 > 🧪 **Demonstração Interativa Online (Bônus para Avaliação):** [**https://emporio-da-musica-agent-seven.vercel.app/**](https://emporio-da-musica-agent-seven.vercel.app/)
-> *Ambiente publicado na Vercel exclusivamente para facilitar o teste imediato pela banca avaliadora (inclui simulador do chat do cliente + modo opcional "Raio-X" para inspecionar as chamadas de ferramentas em tempo real).*
+> *Site publicado na Vercel exclusivamente como ambiente de demonstração do case para facilitar o teste imediato pela banca avaliadora. O painel central simula o chat que um cliente usaria, enquanto os painéis laterais ("Atalhos de Teste" e "Modo Avaliador — Raio-X") existem apenas para mostrar quais ferramentas o agente acionou por trás dos panos — algo que um cliente real não veria.*
 
 ---
 
 ## ✨ Visão Geral da Solução
 
-A equipe da Empório da Música recebia grande volume de dúvidas recorrentes sobre disponibilidade de instrumentos, preços, promoções, formas de pagamento, rastreamento de pedidos e regras de troca/devolução.
+A equipe da Empório da Música recebia muitas dúvidas repetidas sobre disponibilidade de instrumentos, preços, promoções, formas de pagamento, rastreamento de pedidos e regras de troca/devolução.
 
-Para resolver esse problema com **precisão nos números** e **fidelidade às políticas internas**, o foco central deste projeto é o **motor do Agente em Python**, estruturado como um **Agente Híbrido com Function Calling**:
-- **Dados operacionais estruturados (`data/*.csv`)** são higienizados, auditados e consultados de forma determinística via **SQLite em Python**, eliminando alucinações em preços, descontos, cálculos de PIX e regras de parcelamento.
-- **Políticas e procedimentos (`data/políticas_da_loja.pdf`)** são indexados por seção hierárquica em um motor **RAG Híbrido** que combina **Embeddings Semânticos (`gemini-embedding-2`)** e **BM25 Léxico** via *Reciprocal Rank Fusion (RRF)*.
-- **Interface de Interação (CLI + Sandbox Web de Demonstração):** o agente funciona integralmente via terminal (`python cli.py`) e API (`FastAPI`). Como complemento ("cereja do bolo") para facilitar a experiência da banca avaliadora, o projeto inclui uma **UI web simples publicada na Vercel** que atua como um **Sandbox de Demonstração Técnica**: a área central simula o canal de mensagens do cliente final (como o WhatsApp da loja), enquanto os painéis laterais (*Atalhos de Teste* e *Modo Avaliador / Raio-X*) foram criados **exclusivamente para inspeção técnica durante a avaliação do case** (ocultáveis em 1 clique e naturalmente inexistentes para o consumidor final em produção).
+Seguindo a orientação principal do desafio (*"o foco é o agente funcionando corretamente"* e **Python como linguagem principal**), estruturei a solução separando o que é **consulta exata em tabelas** do que é **consulta de regras em texto**:
+- **Dados estruturados (`data/*.csv`)** passam por limpeza e validação e são consultados via **SQLite em Python** — garantindo que preços, estoque, descontos de PIX e cálculos de parcelas venham de código exato, sem depender do modelo "tentar calcular de cabeça".
+- **Políticas da loja (`data/políticas_da_loja.pdf`)** foram separadas pelas seções numeradas do manual e indexadas em um módulo de **RAG** que combina **busca por sentido** (embeddings do Gemini) com **busca por palavras exatas** — permitindo achar a regra certa tanto quando o cliente fala de forma informal quanto quando cita um termo específico.
+- **Interface Simples (CLI + Sandbox Web na Vercel):** o agente roda direto pelo terminal (`python cli.py`) e via `FastAPI`. Como uma "cereja do bolo" para facilitar a avaliação, publiquei também uma interface web simples na Vercel que permite testar cenários com 1 clique e acompanhar as ferramentas acionadas pelo agente no **Modo Avaliador (Raio-X)**.
 
 ---
 
@@ -224,12 +226,12 @@ Para resolver esse problema com **precisão nos números** e **fidelidade às po
 ```mermaid
 flowchart LR
     C["👤 Cliente / Avaliador<br/>(CLI ou Sandbox na Vercel)"] --> API["🐍 FastAPI / CLI<br/>(Python 3.12)"]
-    API --> AG["🧠 Orquestrador do Agente<br/>Gemini 3.5 Flash + Fallback"]
-    API <--> MEM["💾 Memória de Sessão<br/>(SQLite / Sync Serverless)"]
+    API --> AG["🧠 Orquestrador do Agente<br/>Gemini 3.5 Flash + Modelo Reserva"]
+    API <--> MEM["💾 Histórico de Conversa<br/>(SQLite)"]
 
     AG -->|"Catálogo, Estoque,<br/>PIX e Parcelamento"| T1["🛠️ buscar_catalogo_instrumentos<br/>listar_categorias_e_promocoes_ativas"]
-    AG -->|"Status, Rastreio e<br/>Validação LGPD"| T2["📦 consultar_pedido_cliente<br/>(SQLite Relacional)"]
-    AG -->|"Trocas, Frete, Horários,<br/>Garantia e Institucional"| T3["📖 consultar_politicas_loja<br/>(RAG Híbrido: RRF = Semântico + BM25)"]
+    AG -->|"Status, Rastreio e<br/>Checagem LGPD"| T2["📦 consultar_pedido_cliente<br/>(Consultas SQLite)"]
+    AG -->|"Trocas, Frete, Horários,<br/>Garantia e Regras"| T3["📖 consultar_politicas_loja<br/>(Busca no PDF: Sentido + Palavras)"]
 ```
 
 ### Estrutura de Pastas
@@ -237,30 +239,30 @@ flowchart LR
 ```text
 emporio-da-musica/
 ├── api/
-│   └── index.py               # Entrada FastAPI (local + Vercel Serverless) e rate limiting
+│   └── index.py               # Entrada da API FastAPI (local + Vercel) e limite simples por IP
 ├── data/
 │   ├── *.csv                  # Tabelas originais de catálogo, clientes, pedidos e promoções
-│   ├── políticas_da_loja.pdf  # Manual interno oficial da Empório da Música
-│   └── policies_index.json    # Cache versionado dos chunks hierárquicos + embeddings (768d)
-├── examples/                  # 5 transcrições reais multi-turno com telemetria de tools
-├── public/                    # Interface web leve de demonstração (HTML/CSS/JS) com Raio-X
+│   ├── políticas_da_loja.pdf  # Manual interno oficial da Empório da Música (8 páginas)
+│   └── policies_index.json    # Seções do PDF + vetores salvos para iniciar rápido
+├── examples/                  # 5 conversas reais geradas e testadas no agente
+├── public/                    # Interface web simples de demonstração (HTML/CSS/JS) com Raio-X
 ├── scripts/
-│   └── generate_examples.py   # Script reprodutível que executa e exporta os cenários de teste
+│   └── generate_examples.py   # Script para rodar e exportar os cenários reais de conversa
 ├── src/
-│   ├── config.py              # Variáveis de ambiente, caminhos e cadeia de fallback
-│   ├── database.py            # Limpeza dos CSVs, auditoria de anomalias e banco SQLite
-│   ├── rag.py                 # Extrator de PDF sensível a seções + busca híbrida (BM25 + Cosseno)
-│   ├── tools.py               # Ferramentas determinísticas de catálogo, pagamento, pedidos e RAG
-│   ├── prompts.py             # System Prompt, persona musical e guardrails de escopo/LGPD
-│   ├── memory.py              # Persistência de histórico de conversa por sessão
-│   └── agent.py               # Loop de Function Calling, rastreabilidade de tools e resiliência
+│   ├── config.py              # Configurações, caminhos e lista de modelos reserva
+│   ├── database.py            # Limpeza dos CSVs, checagem de qualidade e carga no SQLite
+│   ├── rag.py                 # Divisão do PDF por seções + busca combinada (sentido + palavras)
+│   ├── tools.py               # Funções Python de catálogo, cálculo de pagamento, pedidos e PDF
+│   ├── prompts.py             # Instruções de sistema, tom da loja e limites de escopo
+│   ├── memory.py              # Histórico da conversa salvo por sessão no SQLite
+│   └── agent.py               # Loop principal que conecta o Gemini às funções Python
 ├── tests/
-│   └── test_emporio_agent.py  # 11 testes automatizados cobrindo regras críticas de negócio
-├── cli.py                     # Interface interativa de linha de comando (modo principal local)
+│   └── test_emporio_agent.py  # 11 testes automatizados validando as regras de negócio
+├── cli.py                     # Chat interativo pelo terminal (modo principal local)
 ├── pytest.ini                 # Configuração do pytest
 ├── requirements.txt           # Dependências enxutas de produção
 ├── requirements-dev.txt       # Dependências de desenvolvimento e testes (pytest)
-└── vercel.json                # Configuração de empacotamento e função Python na Vercel
+└── vercel.json                # Configuração de deploy na Vercel
 ```
 
 ---
@@ -293,7 +295,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
-Abra o arquivo `.env` e insira sua chave gratuita:
+Abra o arquivo `.env` e coloque sua chave gratuita:
 
 ```env
 GEMINI_API_KEY=sua_chave_do_google_ai_studio
@@ -302,21 +304,19 @@ GEMINI_MODEL=gemini-3.5-flash
 
 ### 3. Executar via Terminal — CLI (Modo Principal Local)
 
-Para testar diretamente o motor do agente em Python pelo terminal:
-
 ```bash
 python cli.py
 ```
 
-### 4. Executar o Sandbox Web Simples (Opcional / Mesmo Ambiente da Vercel)
+### 4. Executar o Sandbox Web Localmente (Opcional / Mesmo Ambiente da Vercel)
 
 ```bash
 uvicorn api.index:app --reload --port 8000
 ```
 
-Acesse **`http://localhost:8000`** no navegador para testar o simulador de chat do cliente com o modo opcional de inspeção para avaliadores (*Modo Avaliador — Raio-X*).
+Acesse **`http://localhost:8000`** no navegador para usar o simulador de chat do cliente junto com o painel opcional **Modo Avaliador (Raio-X)**.
 
-### 5. Executar a Suíte de Testes Automatizados
+### 5. Executar os Testes Automatizados
 
 ```bash
 pytest -v
@@ -326,70 +326,72 @@ pytest -v
 
 ## 🧠 Justificativa das Decisões Técnicas
 
-### 1. Abordagem Híbrida (Function Calling + SQLite + RAG) vs. Alternativas
-- **Por que não usar RAG puro sobre os CSVs?** Buscas vetoriais em tabelas falham em filtros numéricos exatos (como *"violões até R$ 1.000"*), somas, cruzamentos relacionais (`orders` ↔ `order_items` ↔ `products` ↔ `customers`) e verificações booleanas estritas (`is_active = 1`).
-- **Por que não usar um SQL Agent livre (Text-to-SQL)?** Permitir que o LLM gere SQL arbitrário introduz risco de erros de sintaxe/join, esquecimento de filtros de negócio (como ignorar itens `discontinued` com saldo em estoque) e exposição acidental de dados pessoais de outros clientes.
-- **Solução escolhida:** Ferramentas Python tipadas que encapsulam consultas SQL parametrizadas e cálculos financeiros determinísticos, combinadas a uma ferramenta de **RAG Híbrido** dedicada ao manual em PDF. O LLM atua onde é mais forte: compreensão de intenção, seleção/combinação de ferramentas e síntese empática na persona da loja.
+### 1. Separação entre Dados Tabulares (SQLite) e Texto de Políticas (RAG)
+- Vindo da área de Dados, minha principal preocupação foi garantir que o agente não errasse contas nem inventasse status de estoque/pedidos. Buscar linhas de CSV apenas como texto costuma falhar em filtros numéricos (*"violões até R\$ 1.000"*), cruzamentos entre tabelas (`orders`, `order_items`, `products` e `customers`) e flags booleanas (`is_active = 1`).
+- Por outro lado, deixar o LLM escrever SQL livremente traria risco de esquecer filtros importantes de negócio (como não vender itens `discontinued` mesmo com saldo em estoque) ou acabar expondo pedidos de outros clientes.
+- **Caminho escolhido:** Funções Python bem definidas (`tools.py`) executam consultas SQL parametrizadas no SQLite e fazem os cálculos exatos de PIX e parcelamento, enquanto uma ferramenta separada de RAG busca as regras escritas no PDF. Assim, o LLM foca no que faz melhor: entender a pergunta do cliente, escolher qual função chamar e montar uma resposta clara e acolhedora.
 
-### 2. Modelo, Provedor e Resiliência (Fallback Automático)
-- **Provedor:** **Google Gemini API** (Free Tier via Google AI Studio), escolhida por oferecer excelente desempenho em português, *Function Calling* nativo confiável e modelo de *embeddings* na mesma credencial gratuita.
-- **Cadeia de Fallback (`MODEL_FALLBACK_CHAIN`):** APIs gratuitas podem sofrer picos momentâneos de demanda (`HTTP 503` / `429`). O orquestrador em `src/agent.py` configura *timeouts* curtos e realiza *failover* automático de `gemini-3.5-flash` para `gemini-3.5-flash-lite` (e `gemini-3.8-flash`), evitando travamentos durante testes. Além disso, o `thinking_budget` foi calibrado em `256` tokens para equilibrar raciocínio de seleção de *tools* com latência responsiva (~2 a 4s).
+### 2. Escolha do Modelo e Modelo Reserva (Fallback)
+- Utilizei a API gratuita do **Google Gemini (`gemini-3.5-flash`)** pelo Google AI Studio por atender bem em português, ter suporte direto a chamada de funções (*Function Calling*) e já oferecer o modelo de *embeddings* na mesma chave gratuita.
+- Durante os testes reais, percebemos que modelos gratuitos podem responder com erro temporário de sobrecarga (`HTTP 503`) em horários de pico. Por isso, o `src/agent.py` conta com uma lista de backup: se o modelo principal oscilar, ele tenta automaticamente o `gemini-3.5-flash-lite` (e `gemini-3.8-flash`) para não travar a conversa.
 
-### 3. Arquitetura de Retrieval (RAG Sensível a Seções + Fusão Híbrida RRF)
-- **Chunking Hierárquico:** Em vez de recortes fixos de caracteres que quebram tabelas ao meio, `src/rag.py` higieniza cabeçalhos/rodapés, concatena quebras de página (preservando seções que atravessam páginas, como *5.2 Entregas para Outras Cidades* e *7.2 Fluxo de Atendimento*) e segmenta o manual nas suas **26 seções e subseções oficiais** (`1.` a `10.`), mantendo o título da seção-pai em cada *chunk*.
-- **Busca Híbrida (Semântica + BM25):** Combina similaridade de cosseno em vetores de 768 dimensões (`gemini-embedding-2`, pré-indexados em `data/policies_index.json` para eliminar custo de *cold start*) com pontuação léxica **BM25** em português via **Reciprocal Rank Fusion (RRF)**. Assim, buscas conceituais (*"comprei online e não curti"*) encontram *4.1 Direito de Arrependimento*, enquanto termos exatos (*"Jadlog"*, *"LGPD"*, *"CNPJ"*) mantêm precisão máxima. Caso a API de embeddings esteja indisponível, o sistema degrada graciosamente para BM25 puro sem interromper o atendimento.
+### 3. Busca no Manual de Políticas em PDF (`src/rag.py`)
+- Em vez de fatiar o PDF a cada X caracteres (o que quebraria tabelas de frete e parcelamento no meio), o código limpa cabeçalhos/rodapés e divide o documento pelas suas **26 seções numeradas** (`1.`, `1.1`, ..., `10.`), mantendo o título da seção junto do texto.
+- Na hora de buscar a regra certa, ele junta dois tipos de busca: **busca por sentido** (usando *embeddings* do Gemini — ótima quando o cliente diz *"comprei no site e desisti"* sem usar o termo *"Direito de Arrependimento"*) + **busca por palavras exatas** (BM25 — ótima para termos específicos como *"Jadlog"*, *"LGPD"* ou *"CNPJ"*). As seções já processadas ficam salvas em `data/policies_index.json` para o sistema abrir rápido sem precisar reprocessar o PDF a cada pergunta.
 
-### 4. Interface de Interação e Persistência do Histórico
-- **Prioridade no Agente + Conveniência para Avaliação:** Seguindo a orientação do desafio (*"o foco é o agente funcionando corretamente"*), toda a inteligência de negócio, higienização, busca híbrida e orquestração foi concentrada nos módulos Python (`src/`) e exposta via CLI (`cli.py`). A interface web simples servida na Vercel foi pensada como um **extra de usabilidade para a avaliação**: permite testar o agente imediatamente sem precisar configurar chaves locais e separa claramente o **Simulador de Chat do Cliente** do **Modo Avaliador (Raio-X)** — este último criado apenas para dar visibilidade às decisões internas de *Function Calling* durante a revisão técnica, não fazendo parte da visão de um usuário final real.
-- **Memória de Conversa:** Implementada em `src/memory.py` com **SQLite** (`sessions.db` localmente e `/tmp/emporio_sessions.db` em ambiente serverless), complementada por sincronização do histórico recente a partir do navegador (`localStorage`). Isso garante continuidade natural em perguntas de acompanhamento (*"e como fica ele no PIX?"*, *"meu nome é Ana Carolina"*) mesmo entre recarregamentos ou reciclagem de instâncias serverless.
+### 4. Interface de Interação e Histórico de Conversa
+- Toda a lógica do agente está concentrada em Python (`src/`) e funciona direto no terminal (`cli.py`). O site na Vercel entrou como um extra para facilitar os testes da banca, deixando explícita a diferença entre o **Simulador de Chat do Cliente** e o **Modo Avaliador (Raio-X)**.
+- O histórico das mensagens fica salvo por sessão em **SQLite** (`sessions.db` localmente, e em `/tmp` combinado com o histórico recente do navegador na Vercel), permitindo perguntas de continuação naturais (*"e quanto ele fica no PIX?"*, *"meu nome é Ana Carolina"*).
 
 ---
 
-## 🔍 Auditoria de Dados e Suposições Documentadas
+## 🔍 Análise Exploratória dos Dados e Regras Assumidas
 
-Durante a exploração dos arquivos em `data/`, foram identificadas inconsistências reais (provavelmente inseridas para avaliar rigor analítico). Abaixo estão os achados e como o sistema os trata automaticamente:
+Ao explorar as tabelas em `data/` e cruzar com o manual em PDF, apareceram várias inconsistências de cadastro e casos de borda que precisavam de tratamento explícito:
 
-| Fonte | Situação Encontrada | Decisão / Tratamento Implementado |
+| Fonte | O que foi encontrado nos dados | Como o projeto trata |
 | :--- | :--- | :--- |
-| `promotions.csv` | De 25 promoções cadastradas, **21 estão expiradas (`is_active = 0`)** — incluindo a de 12% do *Takamine GD20* (`product_id = 95`) — e apenas **4 estão ativas (`is_active = 1`)** (`90`, `94`, `121`, `127`). | `tools.py` aplica descontos **exclusivamente** quando `is_active = 1`, mas preserva o histórico expirado para explicar com transparência caso o cliente mencione uma oferta antiga (Seção 7.3). |
-| Manual Seção 3 vs. 6.2 | PIX concede 5% de desconto à vista, porém promoções **não são cumulativas** com o desconto de PIX. | `calcular_condicoes_pagamento()` aplica 5% no PIX apenas quando `em_promocao_ativa = False`; em itens promocionais, mantém o valor promocional e exibe preço original + % de desconto. |
-| Manual Seção 3 vs. 3.1 | A tabela geral cita parcela mínima de R\$ 100,00, enquanto o item 3.1 detalha escada progressiva (até 3x mín. R\$ 50; 4x–6x mín. R\$ 80; 7x–12x mín. R\$ 100). | Adotada a regra específica da **Seção 3.1** para calcular o número máximo exato de parcelas sem juros de cada instrumento. |
-| `products.csv` (`id = 136`) | O baixo *Ibanez Bass 2X* possui `stock_quantity = 13`, mas `status = discontinued`. | Filtro de estoque ignora saldo residual de itens `discontinued`, classifica como `descontinuado` e sugere alternativas ativas da mesma categoria (Seção 7.3). |
-| `products.csv` (`id = 96`, `130`) | *Giannini GF-3D* está `active` com `stock_quantity = 0`; *Kala KA-ABP-CTG* está `coming_soon` (e aparece nos pedidos `3` e `14`). | Excluídos das listagens de pronta entrega; quando buscados diretamente, informam status exato e retornam 3 alternativas similares disponíveis. |
-| `products.csv` (`ids 135–144`) | Divergências cadastrais entre título, descrição e JSON `specs` (ex.: `id = 135` *Music Man* com descrição *Fender Jazz Bass*; `id = 142` *Korg* com descrição *Roland 88 teclas* e `specs` `61` teclas). | `database.py` detecta essas anomalias na carga (`data_quality_notes`) e instrui o agente a sinalizar a divergência com transparência, recomendando confirmação física com a equipe. |
-| `categories.csv` (`ids 6, 7, 8`) | As categorias *Sopro (Madeiras)*, *Sopro (Metais)* e *Cordas Orquestrais* existem em `categories.csv`, mas têm 0 produtos em `products.csv`. | Mapeadas em `listar_categorias_e_promocoes_ativas()` com `disponiveis = 0` para que o agente informe indisponibilidade atual no catálogo digital sem inventar itens. |
-| `políticas_da_loja.pdf` | Capa/Seção 1.2 informam `(67) 3341-4444` e e-mail com acento na tabela 1.2 (`contato@empóriodamusica.com.br`), enquanto a Seção 7 informa WhatsApp `(67) 3321-4500`. | Padronizado e-mail válido sem acento (`contato@emporiodamusica.com.br`) e apresentação transparente de ambos os números (central `(67) 3341-4444` e WhatsApp dedicado `(67) 3321-4500`). |
-| `orders.csv` + LGPD | Consulta livre por `order_id` sequencial (`1..20`) poderia expor dados pessoais e compras de terceiros. | `consultar_pedido_cliente()` exige confirmação de nome, e-mail ou final do telefone do titular antes de liberar detalhes do pedido e mascara o e-mail no retorno (Seção 9 - LGPD). |
+| `promotions.csv` | Das 25 promoções da tabela, **21 estão expiradas (`is_active = 0`)** — incluindo a de 12% do *Takamine GD20* (`product_id = 95`) — e só **4 estão ativas (`is_active = 1`)** (`90`, `94`, `121`, `127`). | `tools.py` aplica desconto **apenas** quando `is_active = 1`, mas guarda a informação de que houve promoção encerrada para explicar com transparência se o cliente perguntar (Seção 7.3). |
+| Manual Seção 3 vs. 6.2 | O PIX dá 5% de desconto à vista, mas promoções ativas **não acumulam** com os 5% do PIX. | `calcular_condicoes_pagamento()` só aplica 5% no PIX quando o produto não tem promoção ativa; nos promocionais, mantém o preço da oferta e mostra preço original + % de desconto. |
+| Manual Seção 3 vs. 3.1 | A tabela inicial fala em parcela mínima de R\$ 100,00, mas o item 3.1 detalha faixas (até 3x mín. R\$ 50; 4x–6x mín. R\$ 80; 7x–12x mín. R\$ 100). | Adotei a regra detalhada da **Seção 3.1** para calcular o máximo exato de parcelas sem juros de cada instrumento. |
+| `products.csv` (`id = 136`) | O baixo *Ibanez Bass 2X* tem `stock_quantity = 13`, porém `status = discontinued`. | Se filtrássemos apenas `estoque > 0`, venderíamos um item fora de linha. O código bloqueia itens `discontinued` e sugere alternativas ativas da mesma categoria. |
+| `products.csv` (`id = 96`, `130`) | *Giannini GF-3D* está `active` com `stock_quantity = 0`; *Kala KA-ABP-CTG* está `coming_soon` (e aparece nos pedidos `3` e `14`). | Não aparecem como pronta entrega; quando buscados pelo nome, informam o status correto e sugerem 3 instrumentos similares disponíveis. |
+| `products.csv` (`ids 135–144`) | Divergências entre nome, descrição e JSON `specs` (ex.: `id = 135` chama *Music Man*, mas a descrição fala *Fender Jazz Bass*; `id = 142` *Korg* vs *Roland 88 teclas* vs `specs` `61` teclas). | `database.py` marca essas divergências na carga (`data_quality_notes`) para o agente avisar o cliente com transparência e oferecer confirmação física na loja. |
+| `categories.csv` (`ids 6, 7, 8`) | *Sopro (Madeiras)*, *Sopro (Metais)* e *Cordas Orquestrais* existem em `categories.csv`, mas têm 0 itens em `products.csv`. | Retornam `disponiveis = 0`, permitindo explicar que não há modelos cadastrados no momento sem inventar produtos. |
+| `políticas_da_loja.pdf` | Capa/Seção 1.2 trazem `(67) 3341-4444` e e-mail com acento (`contato@empóriodamusica.com.br`), enquanto a Seção 7 traz WhatsApp `(67) 3321-4500`. | Padronizei o e-mail válido sem acento (`contato@emporiodamusica.com.br`) e mantive ambos os números oficiais claros na resposta. |
+| `orders.csv` + LGPD | Como os pedidos têm IDs simples (`1` a `20`), qualquer pessoa poderia consultar compras de terceiros só chutando o número. | `consultar_pedido_cliente()` pede uma confirmação simples do titular (nome, e-mail ou final do telefone) antes de abrir os dados do pedido e mascara parte do e-mail (Seção 9 - LGPD). |
 
 ---
 
 ## 💬 Exemplos Reais de Interação (`examples/`)
 
-A pasta [`examples/`](./examples/) contém **5 conversas multi-turno reais** geradas pelo agente (incluindo os registros das *tools* chamadas e latências):
+A pasta [`examples/`](./examples/) reúne **5 conversas reais de múltiplos turnos** testadas no agente (incluindo o registro de quais funções foram chamadas em cada resposta):
 
-1. [`01_catalogo_violoes_ate_1000.md`](./examples/01_catalogo_violoes_ate_1000.md) — Busca filtrada de violões até R\$ 1.000 + recomendação para iniciante em nylon com simulação PIX/cartão.
-2. [`02_takamine_gd20_promocao_expirada_e_loja.md`](./examples/02_takamine_gd20_promocao_expirada_e_loja.md) — Consulta de preço do Takamine GD20 tratando promoção expirada (`is_active = 0`) + endereço e horário da loja.
-3. [`03_pedido_lgpd_e_direito_arrependimento.md`](./examples/03_pedido_lgpd_e_direito_arrependimento.md) — **Cenário não trivial:** rastreamento do pedido `#8` com verificação de titularidade LGPD + aplicação das regras de Direito de Arrependimento (Seção 4.1).
-4. [`04_promocao_ativa_nao_cumulativa_e_sem_estoque.md`](./examples/04_promocao_ativa_nao_cumulativa_e_sem_estoque.md) — Promoção ativa não cumulativa com PIX (*Crafter HT-100*) + tratamento de item sem estoque com sugestão de alternativas (*Giannini GF-3D*).
-5. [`05_guardrails_acessorios_e_fora_de_escopo.md`](./examples/05_guardrails_acessorios_e_fora_de_escopo.md) — Recusa educada de acessórios avulsos (cordas/palhetas/amplificador) e bloqueio de solicitações fora do escopo da loja.
-
----
-
-## ⚠️ Limitações Conhecidas e Próximos Passos (Com Mais Tempo)
-
-1. **Persistência Distribuída em Produção:** Na Vercel Serverless, o armazenamento `/tmp` é efêmero entre instâncias frias (mitigado aqui via sincronização do histórico recente pelo frontend). Em produção real, migraria o estado de sessão para **PostgreSQL (Supabase/Neon)** ou **Redis (Upstash)**.
-2. **Autenticação Forte para Pedidos:** A confirmação atual de titularidade (nome/e-mail/telefone) previne enumeração casual de IDs, mas em produção via WhatsApp Business API integraria validação pelo número autenticado do remetente ou código OTP.
-3. **Avaliação Automatizada de Respostas (Evals):** Além dos testes determinísticos de regras de negócio (`pytest`), implementaria um pipeline de *LLM-as-a-Judge* medindo *faithfulness*, *tool selection accuracy* e aderência de tom em dezenas de diálogos sintéticos.
-4. **Cálculo de Frete em Tempo Real:** Integração com APIs de frete (Correios/Jadlog) por CEP para cotações automáticas fora da Região Metropolitana de Campo Grande.
-5. **Streaming de Respostas (SSE):** Envio progressivo de tokens na interface web para reduzir a percepção de latência em respostas mais longas.
+1. [`01_catalogo_violoes_ate_1000.md`](./examples/01_catalogo_violoes_ate_1000.md) — Busca de violões até R\$ 1.000 + indicação para iniciante em nylon e cálculo de PIX/parcelas.
+2. [`02_takamine_gd20_promocao_expirada_e_loja.md`](./examples/02_takamine_gd20_promocao_expirada_e_loja.md) — Preço do *Takamine GD20* tratando promoção expirada (`is_active = 0`) + endereço e horário da loja.
+3. [`03_pedido_lgpd_e_direito_arrependimento.md`](./examples/03_pedido_lgpd_e_direito_arrependimento.md) — **Cenário completo:** rastreamento do pedido `#8` com confirmação LGPD + dúvida sobre Direito de Arrependimento (Seção 4.1).
+4. [`04_promocao_ativa_nao_cumulativa_e_sem_estoque.md`](./examples/04_promocao_ativa_nao_cumulativa_e_sem_estoque.md) — Promoção ativa não cumulativa com PIX (*Crafter HT-100*) + item sem estoque sugerindo alternativas (*Giannini GF-3D*).
+5. [`05_guardrails_acessorios_e_fora_de_escopo.md`](./examples/05_guardrails_acessorios_e_fora_de_escopo.md) — Redirecionamento educado para acessórios avulsos (cordas/palhetas/amplificador) e recusa de temas fora do escopo da loja.
 
 ---
 
-## 🤖 Uso de Assistentes de Código (Workflow com IA)
+## ⚠️ Limitações Conhecidas e O Que Eu Faria Com Mais Tempo
 
-Conforme solicitado nas instruções do desafio, este projeto contou com o uso do **Google Antigravity** como assistente de programação em par (*AI pair programming*). Meu fluxo de trabalho foi estruturado nas seguintes etapas:
+1. **Banco de Dados em Nuvem para o Histórico:** Rodando no computador, o SQLite salva as conversas em disco (`sessions.db`). Na Vercel, como as funções serverless usam uma pasta temporária (`/tmp`) que pode reiniciar, contornei isso enviando as mensagens recentes do navegador junto na requisição. Em um projeto real de produção, eu salvaria o histórico em um banco em nuvem como **PostgreSQL**.
+2. **Validação de Identidade Mais Forte nos Pedidos:** Pedir confirmação de nome, e-mail ou telefone evita consultas curiosas por ID sequencial (`#1`, `#2`...), mas em um canal oficial de WhatsApp Business eu vincularia a consulta ao próprio número autenticado do cliente ou a um código de verificação.
+3. **Bateria Maior de Testes de Conversa:** Hoje os testes automatizados (`pytest`) garantem que as funções em Python/SQL acertem descontos, parcelas, estoque, LGPD e trechos das políticas. Com mais tempo, eu montaria uma planilha/bateria maior de perguntas difíceis de clientes para reavaliar a qualidade das respostas finais sempre que mudasse o prompt ou a versão do modelo.
+4. **Cálculo de Frete por CEP:** Hoje o agente explica as regras e prazos oficiais do manual em PDF; um próximo passo prático seria consultar tabelas ou APIs dos Correios e da Jadlog para estimar o valor do frete pelo CEP do cliente.
 
-1. **Análise Exploratória e Descoberta de Casos de Borda:** Utilizei o assistente para inspecionar rapidamente a estrutura relacional dos 6 arquivos CSV e as 8 páginas do manual em PDF, levantando hipóteses de inconsistências cadastrais (como produtos descontinuados com estoque positivo, promoções inativas e regras conflitantes de parcelamento) que revisei e transformei em requisitos de negócio explícitos.
-2. **Desenho de Arquitetura Antes do Código:** Definimos em conjunto um plano em etapas priorizando Python como linguagem central, separação clara entre dados tabulares (SQLite) e texto normativo (RAG híbrido), e compatibilidade gratuita com deploy serverless na Vercel.
-3. **Desenvolvimento Incremental Orientado a Testes:** Cada módulo (`database`, `rag`, `tools`, `agent`, `api`, `ui`) foi implementado e validado individualmente com testes unitários (`pytest`) e chamadas reais à API do Gemini — o que permitiu detectar e corrigir cedo comportamentos reais, como picos `HTTP 503` em modelos específicos (resolvido com cadeia de *fallback*) e particularidades de empacotamento/roteamento serverless na Vercel.
-4. **Documentação e Identidade Visual:** Apoio na construção do sandbox web temático da Empório da Música (incluindo o inspetor *Modo Avaliador — Raio-X* para facilitar a avaliação técnica) e na consolidação desta documentação bilíngue.
+---
+
+## 🤖 Uso de Assistentes de Código e Como Validei Cada Etapa
+
+Tenho **pouco mais de 4 anos de experiência na área de Dados** e, embora já viesse estudando o tema, este foi o **meu primeiro projeto prático construindo um agente conversacional com LLM de ponta a ponta**. Conforme permitido e incentivado nas instruções do case, utilizei o **Google Antigravity** como assistente de desenvolvimento para acelerar as frentes em que eu tinha menos prática prévia (sintaxe específica de *Function Calling* do Gemini, implementação da busca combinada no PDF e configuração de deploy na Vercel), enquanto usei minha bagagem em dados para guiar as regras de negócio e validar o que estava sendo construído:
+
+1. **Planejamento e Alinhamento de Escopo Antes do Código:** Em vez de pedir para a IA gerar um projeto inteiro de forma "caixa-preta", pedi primeiro uma análise do edital e um plano passo a passo, revisando e ajustando decisões de produto e escopo — por exemplo, fazendo questão de deixar claro na interface e na documentação que o site na Vercel é um **ambiente de demonstração para a avaliação** (já que o painel de *Raio-X* não faria sentido para um cliente real, e o foco pedido pelo case era o agente em Python com uma UI simples).
+2. **Olhar de Dados na Conferência das Regras e Tabelas:** Usei minha experiência com dados e SQL para revisar os cruzamentos entre os 6 arquivos CSV e o manual em PDF — garantindo que promoções inativas (`is_active = 0`) não entrassem nos preços, que itens `discontinued` não fossem oferecidos mesmo tendo saldo em `stock_quantity`, que divergências entre nome/descrição/JSON fossem sinalizadas e que dados pessoais de pedidos não ficassem abertos sem checagem básica de titularidade (LGPD).
+3. **Validação Prática, Testes e Correção de Erros Reais:** Nada do que o assistente sugeriu foi dado como pronto sem rodar e testar na prática:
+   - Subi e testei a aplicação localmente pelo terminal (`uvicorn`), validando o comportamento real das respostas com a chave do Google AI Studio.
+   - Rodamos 11 testes automatizados (`pytest`) sobre as regras críticas e identificamos na prática oscilações temporárias (`HTTP 503`) da API gratuita, validando a troca automática para o modelo reserva.
+   - No deploy na Vercel, as primeiras subidas deram erro em produção (`FUNCTION_INVOCATION_FAILED` e `404` nas rotas da API). Investigando o problema, vimos que a Vercel estava lendo o `pyproject.toml` sem instalar o `requirements.txt` e que uma regra extra de `rewrites` no `vercel.json` quebrava o caminho do FastAPI — corrigimos cada ponto e validamos os endpoints ao vivo na URL pública.
+4. **Revisão Crítica da Documentação:** Por fim, revisei tanto os exemplos reais gerados em `examples/` quanto este `README.md` para que o texto reflita com transparência o que foi construído, testado e compreendido por mim ao longo do case.
