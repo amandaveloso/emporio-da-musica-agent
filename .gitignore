@@ -1,0 +1,31 @@
+# Variáveis de ambiente e chaves secretas (NUNCA subir para o GitHub!)
+.env
+.env.local
+.env.*.local
+
+# Ambientes virtuais Python
+.venv/
+venv/
+env/
+
+# Cache do Python e testes
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+
+# Banco de dados local gerado em tempo de execução / histórico local
+*.db
+*.sqlite
+*.sqlite3
+data/processed/
+
+# Configurações locais da Vercel e IDEs
+.vercel/
+.vscode/
+.idea/
+
+# Arquivos temporários de sistema operacional
+.DS_Store
+Thumbs.db
