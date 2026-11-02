@@ -40,8 +40,8 @@
       </div>
 
       <div class="scenarios-section">
-        <h2>Cenários para Testar (1 clique)</h2>
-        <p class="scenarios-hint">Experimente perguntas de catálogo, regras de negócio, pedidos e escopo:</p>
+        <h2>🧪 Atalhos para Avaliação</h2>
+        <p class="scenarios-hint">Painel exclusivo de demonstração do case — dispare cenários em 1 clique:</p>
         <div class="scenario-list">
           <button class="scenario-btn" data-prompt="Quais opções de violões disponíveis custando até R$ 1.000?">
             <span class="sc-tag">Catálogo + Filtro</span>
@@ -71,7 +71,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <span>Desafio Técnico AI Engineer • Python + FastAPI + Gemini + RAG</span>
+        <span>Ambiente de Demonstração Técnica (Case AI Engineer) • Em produção real, o cliente interage apenas com o canal de mensagens.</span>
       </div>
     </aside>
 
@@ -81,16 +81,19 @@
         <div class="header-left">
           <button class="icon-btn mobile-only" id="toggleSidebarBtn" title="Menu da Loja">☰</button>
           <div>
-            <h2>Atendimento ao Músico</h2>
-            <span class="subtitle">Especialista virtual conectado ao estoque e ao manual oficial</span>
+            <div class="title-with-badge">
+              <h2>Simulador de Atendimento ao Cliente</h2>
+              <span class="demo-pill">Sandbox de Demonstração</span>
+            </div>
+            <span class="subtitle">Visão do cliente no chat • Atalhos e Raio-X visíveis apenas para avaliação técnica</span>
           </div>
         </div>
         <div class="header-actions">
           <button class="btn-outline" id="resetChatBtn" title="Limpar conversa e iniciar nova sessão">
             ↺ Nova Conversa
           </button>
-          <button class="btn-inspector active" id="toggleInspectorBtn" title="Exibir/ocultar ferramentas acionadas pelo agente">
-            🔍 Raio-X do Agente <span class="badge" id="toolCountBadge">0</span>
+          <button class="btn-inspector active" id="toggleInspectorBtn" title="Painel exclusivo para avaliação técnica das tools acionadas">
+            🔍 Modo Avaliador (Raio-X) <span class="badge" id="toolCountBadge">0</span>
           </button>
         </div>
       </header>
@@ -124,10 +127,10 @@
     <aside class="inspector-panel" id="inspectorPanel">
       <div class="inspector-header">
         <div>
-          <h3>🔍 Raio-X do Agente</h3>
-          <p>Telemetria de Function Calling, SQLite e RAG em tempo real</p>
+          <h3>🔍 Modo Avaliador — Raio-X</h3>
+          <p>Visão interna de engenharia (oculta ao cliente final em produção): monitora Function Calling, SQLite e RAG</p>
         </div>
-        <button class="icon-btn" id="closeInspectorBtn" title="Fechar painel">✕</button>
+        <button class="icon-btn" id="closeInspectorBtn" title="Ocultar painel do avaliador (ver apenas chat do cliente)">✕</button>
       </div>
 
       <div class="arch-pills">

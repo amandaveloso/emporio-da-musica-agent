@@ -8,10 +8,10 @@ Protótipo completo de **Agente Conversacional de Atendimento ao Cliente** const
 
 A equipe da Empório da Música recebia grande volume de dúvidas recorrentes sobre disponibilidade de instrumentos, preços, promoções, formas de pagamento, rastreamento de pedidos e regras de troca/devolução.
 
-Para resolver esse problema com **precisão nos números** e **fidelidade às políticas internas**, este projeto implementa um **Agente Híbrido com Function Calling**:
+Para resolver esse problema com **precisão nos números** e **fidelidade às políticas internas**, o foco central deste projeto é o **motor do Agente em Python**, estruturado como um **Agente Híbrido com Function Calling**:
 - **Dados operacionais estruturados (`data/*.csv`)** são higienizados, auditados e consultados de forma determinística via **SQLite em Python**, eliminando alucinações em preços, descontos, cálculos de PIX e regras de parcelamento.
 - **Políticas e procedimentos (`data/políticas_da_loja.pdf`)** são indexados por seção hierárquica em um motor **RAG Híbrido** que combina **Embeddings Semânticos (`gemini-embedding-2`)** e **BM25 Léxico** via *Reciprocal Rank Fusion (RRF)*.
-- **Experiência Completa (CLI + API + Web UI):** além da execução em terminal (`cli.py`), o projeto expõe uma API em **FastAPI** e uma interface web com a identidade visual da loja, cenários de teste em 1 clique e um painel **"Raio-X do Agente"** que exibe em tempo real quais ferramentas foram acionadas em cada resposta.
+- **Interface de Interação (CLI + Sandbox Web de Demonstração):** o agente funciona integralmente via terminal (`python cli.py`) e API (`FastAPI`). Como complemento para facilitar a experiência da banca avaliadora, o projeto inclui uma **UI web simples publicada na Vercel** que atua como um **Sandbox de Demonstração Técnica**: a área central simula o canal de mensagens do cliente final (como o WhatsApp da loja), enquanto os painéis laterais (*Atalhos de Teste* e *Modo Avaliador / Raio-X*) foram criados **exclusivamente para inspeção técnica durante a avaliação do case** (ocultáveis em 1 clique e naturalmente inexistentes para o consumidor final em produção).
 
 ---
 
@@ -95,19 +95,21 @@ GEMINI_API_KEY=sua_chave_do_google_ai_studio
 GEMINI_MODEL=gemini-3.5-flash
 ```
 
-### 3. Executar a Interface Web Completa (Recomendado)
+### 3. Executar via Terminal — CLI (Modo Principal Local)
+
+Para testar diretamente o motor do agente em Python pelo terminal:
+
+```bash
+python cli.py
+```
+
+### 4. Executar o Sandbox Web Simples (Opcional / Mesmo Ambiente da Vercel)
 
 ```bash
 uvicorn api.index:app --reload --port 8000
 ```
 
-Acesse **`http://localhost:8000`** no navegador para utilizar o chat completo com identidade visual e o painel **Raio-X do Agente**.
-
-### 4. Alternativa: Executar via Terminal (CLI)
-
-```bash
-python cli.py
-```
+Acesse **`http://localhost:8000`** no navegador para testar o simulador de chat do cliente com o modo opcional de inspeção para avaliadores (*Modo Avaliador — Raio-X*).
 
 ### 5. Executar a Suíte de Testes Automatizados
 
@@ -132,8 +134,9 @@ pytest -v
 - **Chunking Hierárquico:** Em vez de recortes fixos de caracteres que quebram tabelas ao meio, `src/rag.py` higieniza cabeçalhos/rodapés, concatena quebras de página (preservando seções que atravessam páginas, como *5.2 Entregas para Outras Cidades* e *7.2 Fluxo de Atendimento*) e segmenta o manual nas suas **26 seções e subseções oficiais** (`1.` a `10.`), mantendo o título da seção-pai em cada *chunk*.
 - **Busca Híbrida (Semântica + BM25):** Combina similaridade de cosseno em vetores de 768 dimensões (`gemini-embedding-2`, pré-indexados em `data/policies_index.json` para eliminar custo de *cold start*) com pontuação léxica **BM25** em português via **Reciprocal Rank Fusion (RRF)**. Assim, buscas conceituais (*"comprei online e não curti"*) encontram *4.1 Direito de Arrependimento*, enquanto termos exatos (*"Jadlog"*, *"LGPD"*, *"CNPJ"*) mantêm precisão máxima. Caso a API de embeddings esteja indisponível, o sistema degrada graciosamente para BM25 puro sem interromper o atendimento.
 
-### 4. Persistência do Histórico de Conversa
-- Implementada em `src/memory.py` com **SQLite** (`sessions.db` localmente e `/tmp/emporio_sessions.db` em ambiente serverless), complementada por sincronização do histórico recente a partir do cliente web (`localStorage`). Isso garante continuidade natural em perguntas de acompanhamento (*"e como fica ele no PIX?"*, *"meu nome é Ana Carolina"*) mesmo entre recarregamentos de página ou reciclagem de instâncias serverless na Vercel.
+### 4. Interface de Interação e Persistência do Histórico
+- **Prioridade no Agente + Conveniência para Avaliação:** Seguindo a orientação do desafio (*"o foco é o agente funcionando corretamente"*), toda a inteligência de negócio, higienização, busca híbrida e orquestração foi concentrada nos módulos Python (`src/`) e exposta via CLI (`cli.py`). A interface web simples servida na Vercel foi pensada como um **extra de usabilidade para a avaliação**: permite testar o agente imediatamente sem precisar configurar chaves locais e separa claramente o **Simulador de Chat do Cliente** do **Modo Avaliador (Raio-X)** — este último criado apenas para dar visibilidade às decisões internas de *Function Calling* durante a revisão técnica, não fazendo parte da visão de um usuário final real.
+- **Memória de Conversa:** Implementada em `src/memory.py` com **SQLite** (`sessions.db` localmente e `/tmp/emporio_sessions.db` em ambiente serverless), complementada por sincronização do histórico recente a partir do navegador (`localStorage`). Isso garante continuidade natural em perguntas de acompanhamento (*"e como fica ele no PIX?"*, *"meu nome é Ana Carolina"*) mesmo entre recarregamentos ou reciclagem de instâncias serverless.
 
 ---
 

@@ -209,6 +209,25 @@ body {
   color: var(--petrol-900);
 }
 
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demo-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--amber-100);
+  color: #855606;
+  border: 1px solid rgba(217, 155, 38, 0.45);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
 .subtitle {
   font-size: 0.78rem;
   color: var(--ink-600);
